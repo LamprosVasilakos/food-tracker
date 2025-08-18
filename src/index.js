@@ -1,4 +1,5 @@
 import FetchWrapper from "./fetch-wrapper.js";
+import { capitalize, calculateCalories } from "./helpers.js";
 
 const API = new FetchWrapper(
   "https://firestore.googleapis.com/v1/projects/jsdemo-3f387/databases/(default)/documents/lampros"
@@ -9,6 +10,7 @@ const name = document.querySelector("#create-name");
 const protein = document.querySelector("#create-protein");
 const carbs = document.querySelector("#create-carbs");
 const fat = document.querySelector("#create-fat");
+const foodList = document.querySelector("#food-list");
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -23,9 +25,30 @@ form.addEventListener("submit", async (event) => {
       },
     });
 
-    // Check if the response indicates success
-    // Only clear form if we have a successful response
     if (data && !data.error) {
+      const calories = calculateCalories(carbs.value, protein.value, fat.value);
+      const foodItem = `
+        <li class="card">
+          <div>
+            <h3 class="name">${capitalize(name.value)}</h3>
+            <div class="calories">${calories} calories</div>
+            <ul class="macros">
+              <li class="carbs"><div>Carbs</div><div class="value">${
+                carbs.value
+              }g</div></li>
+              <li class="protein"><div>Protein</div><div class="value">${
+                protein.value
+              }g</div></li>
+              <li class="fat"><div>Fat</div><div class="value">${
+                fat.value
+              }g</div></li>
+            </ul>
+          </div>
+        </li>
+      `;
+      foodList.insertAdjacentHTML("beforeend", foodItem);
+
+      // Clear form
       name.value = "";
       carbs.value = "";
       protein.value = "";
