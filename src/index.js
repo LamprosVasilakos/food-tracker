@@ -1,5 +1,6 @@
 import FetchWrapper from "./fetch-wrapper.js";
 import { capitalize, calculateCalories } from "./helpers.js";
+import snackbar from "snackbar";
 
 const API = new FetchWrapper(
   "https://firestore.googleapis.com/v1/projects/jsdemo-3f387/databases/(default)/documents/lampros"
@@ -46,13 +47,18 @@ form.addEventListener("submit", async (event) => {
           </div>
         </li>
       `;
+
       foodList.insertAdjacentHTML("beforeend", foodItem);
+
+      snackbar.show("Food added successfully.");
 
       // Clear form
       name.value = "";
       carbs.value = "";
       protein.value = "";
       fat.value = "";
+    } else {
+      snackbar.show("Some data is missing.");
     }
   } catch (error) {
     console.error("POST failed:", error);
