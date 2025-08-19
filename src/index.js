@@ -6,12 +6,32 @@ const API = new FetchWrapper(
   "https://firestore.googleapis.com/v1/projects/jsdemo-3f387/databases/(default)/documents/lampros"
 );
 
+// DOM elements
 const form = document.querySelector("#create-form");
 const name = document.querySelector("#create-name");
 const protein = document.querySelector("#create-protein");
 const carbs = document.querySelector("#create-carbs");
 const fat = document.querySelector("#create-fat");
 const foodList = document.querySelector("#food-list");
+
+// Display single food entry
+const displayEntry = (name, carbs, protein, fat) => {
+  const calories = calculateCalories(carbs, protein, fat);
+  const foodItem = `
+    <li class="card">
+      <div>
+        <h3 class="name">${capitalize(name)}</h3>
+        <div class="calories">${calories} calories</div>
+        <ul class="macros">
+          <li class="carbs"><div>Carbs</div><div class="value">${carbs}g</div></li>
+          <li class="protein"><div>Protein</div><div class="value">${protein}g</div></li>
+          <li class="fat"><div>Fat</div><div class="value">${fat}g</div></li>
+        </ul>
+      </div>
+    </li>
+  `;
+  foodList.insertAdjacentHTML("beforeend", foodItem);
+};
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -27,29 +47,7 @@ form.addEventListener("submit", async (event) => {
     });
 
     if (data && !data.error) {
-      const calories = calculateCalories(carbs.value, protein.value, fat.value);
-      const foodItem = `
-        <li class="card">
-          <div>
-            <h3 class="name">${capitalize(name.value)}</h3>
-            <div class="calories">${calories} calories</div>
-            <ul class="macros">
-              <li class="carbs"><div>Carbs</div><div class="value">${
-                carbs.value
-              }g</div></li>
-              <li class="protein"><div>Protein</div><div class="value">${
-                protein.value
-              }g</div></li>
-              <li class="fat"><div>Fat</div><div class="value">${
-                fat.value
-              }g</div></li>
-            </ul>
-          </div>
-        </li>
-      `;
-
-      foodList.insertAdjacentHTML("beforeend", foodItem);
-
+      displayEntry(name.value, carbs.value, protein.value, fat.value);
       snackbar.show("Food added successfully.");
 
       // Clear form
@@ -76,32 +74,12 @@ const init = async () => {
 
     data.documents.forEach((item) => {
       const fields = item.fields;
-      const calories = calculateCalories(
+      displayEntry(
+        fields.name.stringValue,
         fields.carbs.integerValue,
         fields.protein.integerValue,
         fields.fat.integerValue
       );
-
-      const foodItem = `
-        <li class="card">
-          <div>
-            <h3 class="name">${capitalize(fields.name.stringValue)}</h3>
-            <div class="calories">${calories} calories</div>
-            <ul class="macros">
-              <li class="carbs"><div>Carbs</div><div class="value">${
-                fields.carbs.integerValue
-              }g</div></li>
-              <li class="protein"><div>Protein</div><div class="value">${
-                fields.protein.integerValue
-              }g</div></li>
-              <li class="fat"><div>Fat</div><div class="value">${
-                fields.fat.integerValue
-              }g</div></li>
-            </ul>
-          </div>
-        </li>
-      `;
-      foodList.insertAdjacentHTML("beforeend", foodItem);
     });
   } catch (error) {
     console.error("Failed to fetch foods:", error);
