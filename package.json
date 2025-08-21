@@ -12,6 +12,7 @@
     "vite": "^7.1.2"
   },
   "dependencies": {
+    "chart.js": "^4.5.0",
     "snackbar": "^1.1.0"
   }
 }

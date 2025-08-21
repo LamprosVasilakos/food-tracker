@@ -1,79 +1,87 @@
 import FetchWrapper from "./fetch-wrapper.js";
 import { capitalize, calculateCalories } from "./helpers.js";
 import snackbar from "snackbar";
+import AppData from "./app-data.js";
+import { Chart } from "chart.js/auto";
 
 const API = new FetchWrapper(
   "https://firestore.googleapis.com/v1/projects/jsdemo-3f387/databases/(default)/documents/lampros"
 );
 
-// DOM elements
+const appData = new AppData();
+
+const list = document.querySelector("#food-list");
 const form = document.querySelector("#create-form");
 const name = document.querySelector("#create-name");
-const protein = document.querySelector("#create-protein");
 const carbs = document.querySelector("#create-carbs");
+const protein = document.querySelector("#create-protein");
 const fat = document.querySelector("#create-fat");
-const foodList = document.querySelector("#food-list");
 
-// Display single food entry
-const displayEntry = (name, carbs, protein, fat) => {
-  const calories = calculateCalories(carbs, protein, fat);
-  const foodItem = `
-    <li class="card">
-      <div>
-        <h3 class="name">${capitalize(name)}</h3>
-        <div class="calories">${calories} calories</div>
-        <ul class="macros">
-          <li class="carbs"><div>Carbs</div><div class="value">${carbs}g</div></li>
-          <li class="protein"><div>Protein</div><div class="value">${protein}g</div></li>
-          <li class="fat"><div>Fat</div><div class="value">${fat}g</div></li>
-        </ul>
-      </div>
-    </li>
-  `;
-  foodList.insertAdjacentHTML("beforeend", foodItem);
+const updateTotalCalories = () => {
+  const totalCaloriesElement = document.querySelector("#total-calories");
+  if (totalCaloriesElement) {
+    totalCaloriesElement.textContent = appData.getTotalCalories();
+  }
 };
 
-form.addEventListener("submit", async (event) => {
+const displayEntry = (name, carbs, protein, fat) => {
+  appData.addFood(carbs, protein, fat);
+  list.insertAdjacentHTML(
+    "beforeend",
+    `<li class="card">
+        <div>
+          <h3 class="name">${capitalize(name)}</h3>
+          <div class="calories">${calculateCalories(
+            carbs,
+            protein,
+            fat
+          )} calories</div>
+          <ul class="macros">
+            <li class="carbs"><div>Carbs</div><div class="value">${carbs}g</div></li>
+            <li class="protein"><div>Protein</div><div class="value">${protein}g</div></li>
+            <li class="fat"><div>Fat</div><div class="value">${fat}g</div></li>
+          </ul>
+        </div>
+      </li>`
+  );
+  updateTotalCalories();
+};
+
+form.addEventListener("submit", (event) => {
   event.preventDefault();
 
-  try {
-    const data = await API.post("/", {
-      fields: {
-        name: { stringValue: name.value },
-        carbs: { integerValue: carbs.value },
-        protein: { integerValue: protein.value },
-        fat: { integerValue: fat.value },
-      },
-    });
-
-    if (data && !data.error) {
-      displayEntry(name.value, carbs.value, protein.value, fat.value);
-      snackbar.show("Food added successfully.");
-
-      // Clear form
-      name.value = "";
-      carbs.value = "";
-      protein.value = "";
-      fat.value = "";
-    } else {
+  API.post("/", {
+    fields: {
+      name: { stringValue: name.value },
+      carbs: { integerValue: carbs.value },
+      protein: { integerValue: protein.value },
+      fat: { integerValue: fat.value },
+    },
+  }).then((data) => {
+    console.log(data);
+    if (data.error) {
+      // there was an error
       snackbar.show("Some data is missing.");
-    }
-  } catch (error) {
-    console.error("POST failed:", error);
-  }
-});
-
-const init = async () => {
-  try {
-    const data = await API.get("/?pageSize=50");
-
-    if (!data.documents) {
-      foodList.innerHTML = '<p class="empty-state">No foods added yet.</p>';
       return;
     }
 
-    data.documents.forEach((item) => {
-      const fields = item.fields;
+    snackbar.show("Food added successfully.");
+
+    displayEntry(name.value, carbs.value, protein.value, fat.value);
+    renderChart();
+
+    name.value = "";
+    carbs.value = "";
+    protein.value = "";
+    fat.value = "";
+  });
+});
+
+const init = () => {
+  API.get("/?pageSize=100").then((data) => {
+    data.documents?.forEach((doc) => {
+      const fields = doc.fields;
+
       displayEntry(
         fields.name.stringValue,
         fields.carbs.integerValue,
@@ -81,10 +89,45 @@ const init = async () => {
         fields.fat.integerValue
       );
     });
-  } catch (error) {
-    console.error("Failed to fetch foods:", error);
-    snackbar.show("Failed to load foods");
-  }
+    renderChart();
+    updateTotalCalories();
+  });
+};
+
+let chartInstance = null;
+const renderChart = () => {
+  chartInstance?.destroy();
+  const context = document.querySelector("#app-chart").getContext("2d");
+
+  chartInstance = new Chart(context, {
+    type: "bar",
+    data: {
+      labels: ["Carbs", "Protein", "Fat"],
+      datasets: [
+        {
+          label: "Macronutrients",
+          data: [
+            appData.getTotalCarbs(),
+            appData.getTotalProtein(),
+            appData.getTotalFat(),
+          ],
+          backgroundColor: ["#25AEEE", "#FECD52", "#57D269"],
+          borderWidth: 3, // example of other customization
+        },
+      ],
+    },
+    options: {
+      scales: {
+        yAxes: [
+          {
+            ticks: {
+              beginAtZero: true,
+            },
+          },
+        ],
+      },
+    },
+  });
 };
 
 init();
